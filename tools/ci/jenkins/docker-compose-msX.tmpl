@@ -4,6 +4,7 @@ services:
         image: DOCKERDTRTAG:COMMITID
         ports:
             - DOCKEREXTPORT:8888
+            - DOCKERHTTPSEXTPORT:8889
         labels:
           com.docker.ucp.access.label: DOCKERLABEL
         deploy:

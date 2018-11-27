@@ -8,6 +8,7 @@ RUN apk update && apk add nginx \
   php7-fpm \
   php7-curl \
   php7-json \
+  php7-session \
   libcurl \
   curl \
   curl-dev
@@ -29,7 +30,9 @@ RUN chown -R nginx:nginx /app && chmod -R -c 774 /app/web
 COPY ./tools/ci/config/supervisord/supervisord.ini /etc/supervisor.d/supervisord.ini
 COPY ./tools/ci/config/nginx/snippets/fastcgi-php.conf /etc/nginx/snippets/
 COPY ./tools/ci/config/nginx/nginx.conf /etc/nginx
+COPY ./tools/ci/config/ssl /etc/ssl
 EXPOSE 8888
+EXPOSE 8889
 
 CMD supervisord -c /etc/supervisor.d/supervisord.ini
 

@@ -16,43 +16,11 @@ http {
 
     server {
         listen 8888;
-        port_in_redirect off;
-        root /app/web;
-        index index.php;
-        server_name localhost;
-
-        location / {
-            try_files $uri $uri/ /index.php$is_args$args;
-        }
-
-        location ~* \.php$ {
-            include /etc/nginx/fastcgi_params;
-            fastcgi_index index.php;
-            fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
-            fastcgi_param SCRIPT_NAME $fastcgi_script_name;
-            fastcgi_pass unix:/run/php/php7-fpm.sock;
-            fastcgi_intercept_errors on;
-        }
-
-        location @missingredirect {
-            return 302 /;
-        }
 
         location /.well-known/ {
             proxy_pass http://cert.bots.aegpresents.com/.well-known/;
         }
-
-        location ~ /\.ht {
-            deny all;
-        }
-
-        location ~ /composer\.json {
-            deny all;
-        }
-
-        location ~ /composer\.lock {
-            deny all;
-        }
+        return 301 https://$host$request_uri;
     }
     server { 
 
