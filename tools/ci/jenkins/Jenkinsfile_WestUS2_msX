@@ -1,28 +1,27 @@
 node {
     def workspace = pwd()
     def build_cmd = ''
-    def project = "Docker FS Slot @slot@"
+    def project = "Docker Template"
 
-    def dir_rand = "PM25PST@slot@"
+    def dir_rand = "PM25PKSHG7"
     def slack_channel = "#webops"
     def slack_red = '#FF0000'
     def slack_green = '#00FF00'
     def slack_blue = '#043AED'
     def git_branch = "production"
-    def git_id = "aeg-fs@slot@-id"
-    def git_url = "git@github.com:AEG-Presents/AEG-FS@slot@.git"
-    def docker_stack_name = "AEG-FS@slot@-Production"       //"<agency>-<project>-<environment"
+    def git_id = "dockertemplate-id"
+    def git_url = "git@github.com:AEG-Presents/docker_template.git"
+    def docker_stack_name = "AEG-Test-Dev"       //"<agency>-<project>-<environment"
     def docker_server = "tcp://ucp-aegdocker.westus2.cloudapp.azure.com:443"
     def docker_server_id = "aegucpdockerwestus2"
     def docker_registry = "dtr-aegdocker.westus2.cloudapp.azure.com"
     def docker_registry_id = "jenkinsaegdtrwestus2"
-    def docker_compose = "docker-compose-fs@slot@"
-    def docker_dtr_tag = "${docker_registry}/aeg/fs@slot@"
+    def docker_compose = "docker-compose-msX"
+    def docker_dtr_tag = "${docker_registry}/aeg/dockertemplate"
     def docker_ext_port = "4411"
-    def docker_ext_https_port = "4412"
-    def docker_label = "/DEV/AEG/FS@slot@"
-    def docker_cnt = "4" 
-    def site_url = "http://aeg-fs@slot@-prod.trafficmanager.net" 
+    def docker_label = "/Dev/AEG/DockerTemplate"
+    def docker_cnt = "2" 
+    def site_url = "http://aeg-ms1.westus.cloudapp.azure.com" 
 
 
         sh "export"
@@ -98,7 +97,7 @@ node {
         stage ('Create Docker-Compose file') {
           try {
             def commit_id = readFile('.git/commit-id').trim()
-            sh "cd ${workspace}/tools/ci/jenkins && sed 's/COMMITID/${commit_id}/g; s#DOCKERDTRTAG#${docker_dtr_tag}#g; s#DOCKEREXTPORT#${docker_ext_port}#g; s#DOCKERHTTPSEXTPORT#${docker_ext_https_port}#g; s#DOCKERLABEL#${docker_label}#g; s#DOCKERCNT#${docker_cnt}#g' ${docker_compose}.tmpl > ${docker_compose}.yml"
+            sh "cd ${workspace}/tools/ci/jenkins && sed 's/COMMITID/${commit_id}/g; s#DOCKERDTRTAG#${docker_dtr_tag}#g; s#DOCKEREXTPORT#${docker_ext_port}#g; s#DOCKERLABEL#${docker_label}#g; s#DOCKERCNT#${docker_cnt}#g' ${docker_compose}.tmpl > ${docker_compose}.yml"
             sh "cd ${workspace}/tools/ci/jenkins && cat ${docker_compose}.yml"
           } catch (e) {
             slackSend channel: "${slack_channel}",color: "${slack_red}",  message: "Creation of Docker-Compose file failed for ${env.JOB_BASE_NAME}."
