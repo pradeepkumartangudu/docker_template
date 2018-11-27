@@ -1,0 +1,128 @@
+node {
+    def workspace = pwd()
+    def build_cmd = ''
+    def project = "Docker FS Slot @slot@"
+
+    def dir_rand = "PM25PFS@slot@"
+    def slack_channel = "#webops"
+    def slack_red = '#FF0000'
+    def slack_green = '#00FF00'
+    def slack_blue = '#043AED'
+    def git_branch = "production"
+    def git_id = "aeg-fs@slot@-id"
+    def git_url = "git@github.com:AEG-Presents/AEG-FS@slot@.git"
+    def docker_stack_name = "AEG-FS@slot@-Production"       //"<agency>-<project>-<environment"
+    def docker_server = "tcp://ucp-aegdocker.westus.cloudapp.azure.com:443"
+    def docker_server_id = "aegucpdockerwestus"
+    def docker_registry = "dtr-aegdocker.westus.cloudapp.azure.com"
+    def docker_registry_id = "jenkinsaegdtrwestus"
+    def docker_compose = "docker-compose-fs@slot@"
+    def docker_dtr_tag = "${docker_registry}/aeg/fs@slot@"
+    def docker_ext_port = "4411"
+    def docker_ext_https_port = "4412"
+    def docker_label = "/Dev/AEG/FS@slot@"
+    def docker_cnt = "4" 
+    def site_url = "http://aeg-fs@slot@-prod.trafficmanager.net" 
+
+
+        sh "export"
+        slackSend channel: "${slack_channel}", color: "${slack_blue}", message: "Jenkins has started job ${env.JOB_BASE_NAME} Build: ${env.BUILD_NUMBER}."
+        stage('Checkout Git') { 
+          git branch: "${git_branch}", credentialsId: "${git_id}", url: "${git_url}"
+        }
+        stage('Create Docker file') {
+          try { 
+            sh "cd ${workspace}/tools/ci/jenkins && sed 's#BUILDCMD#${build_cmd}#g;'  Dockerfile.build.tmpl > ${workspace}/Dockerfile"
+            sh "cat ${workspace}/Dockerfile"
+          } catch (e) {
+            slackSend channel: "${slack_channel}", color: "${slack_red}", message: "Docker fail creation failed for ${env.JOB_BASE_NAME}"
+            throw e
+          } finally {
+          }
+        }
+        stage ('Compute ID') {
+          try {
+            sh "git rev-parse HEAD > .git/commit-id"
+            sh "git log -1 | sed '/Author/d' | sed 's/^/<p>/' | sed 's#\$#</p>#' > message.txt"
+            def commit_id = readFile('.git/commit-id').trim()
+            println commit_id
+            sh "cat message.txt"
+            sh "cd ${workspace}/tools/ci/jenkins && sed 's/PROJECT/${project}/;s/BUILD/${BUILD_NUMBER}/' version.html.tmpl >  ${workspace}/version_${dir_rand}.html"
+            sh "cat message.txt >> version_${dir_rand}.html"
+          } catch (e) {
+            slackSend channel: "${slack_channel}", color: "${slack_red}", message: "Compute ID failed for ${env.JOB_BASE_NAME}."
+            throw e
+          } finally {
+          }
+        }
+        stage ('Check if image exists') {
+	  try {
+            docker.withServer("${docker_server}" , "${docker_server_id}") {
+              def commit_id = readFile('.git/commit-id').trim()
+              def image_exist = sh ( script: "docker images | grep ${docker_dtr_tag} | grep ${commit_id} | wc -l", 
+                returnStdout: true ).trim()
+              if ( (image_exist).toInteger() != 0 ) { 
+                error("Image already exists ${image_exist}.")
+              } else {
+                println "Image does not exist"
+              }
+            }
+          } catch (e) {
+              def commit_id = readFile('.git/commit-id').trim()
+              def summary = """Job: ${env.JOB_BASE_NAME} failed.
+                  Image already exists with commit id:${commit_id}"""
+              slackSend channel: "${slack_channel}", color: "${slack_red}", message: "${summary}"
+            throw e
+          } finally {
+
+          }
+        }
+        stage ('Build and Publish') {
+          try {
+            sh "cd ${workspace}" 
+            slackSend channel: "${slack_channel}", message: "Building image for ${env.JOB_BASE_NAME}."
+            docker.withServer("${docker_server}" , "${docker_server_id}") {
+              docker.withRegistry("https://${docker_registry}", "${docker_registry_id}") {
+                def commit_id = readFile('.git/commit-id').trim()
+                def image = docker.build ("${docker_dtr_tag}:${commit_id}", "--no-cache .")
+                image.push "${commit_id}"
+                sh "docker images --filter 'label=builder=true'"
+              }
+            }
+          } catch (e) {
+            slackSend channel: "${slack_channel}",color: "${slack_red}",  message: "Building of image failed for ${env.JOB_BASE_NAME}."
+            throw e
+          } finally {
+          }
+        }
+        stage ('Create Docker-Compose file') {
+          try {
+            def commit_id = readFile('.git/commit-id').trim()
+            sh "cd ${workspace}/tools/ci/jenkins && sed 's/COMMITID/${commit_id}/g; s#DOCKERDTRTAG#${docker_dtr_tag}#g; s#DOCKEREXTPORT#${docker_ext_port}#g; s#DOCKERHTTPSEXTPORT#${docker_ext_https_port}#g; s#DOCKERLABEL#${docker_label}#g; s#DOCKERCNT#${docker_cnt}#g' ${docker_compose}.tmpl > ${docker_compose}.yml"
+            sh "cd ${workspace}/tools/ci/jenkins && cat ${docker_compose}.yml"
+          } catch (e) {
+            slackSend channel: "${slack_channel}",color: "${slack_red}",  message: "Creation of Docker-Compose file failed for ${env.JOB_BASE_NAME}."
+            throw e
+          } finally {
+          }
+        }
+         stage ("Docker Stack Deploy to ${docker_stack_name}") {
+           try {
+           
+             def commit_id = readFile('.git/commit-id').trim()
+             docker.withServer("${docker_server}" , "${docker_server_id}") {
+               docker.withRegistry("https://${docker_registry}", "${docker_registry_id}") {
+                 sh "cd ${workspace}/tools/ci/jenkins && docker stack deploy -c ${docker_compose}.yml ${docker_stack_name}"
+               }
+             }
+             slackSend channel: "${slack_channel}", color: "${slack_green}", message: "The ${project} for branch ${git_branch} has been deployed:  ${site_url}"
+              
+            } catch (e) { 
+           
+              slackSend channel: "${slack_channel}",color: "${slack_red}",  message: "Deployment failed for ${env.JOB_BASE_NAME}."
+              throw e
+            } finally {
+
+            }
+         }
+}

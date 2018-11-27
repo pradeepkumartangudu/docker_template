@@ -1,0 +1,25 @@
+version: '3.1'
+services:
+    web:
+        image: DOCKERDTRTAG:COMMITID
+        ports:
+            - DOCKEREXTPORT:8888
+            - DOCKERHTTPSEXTPORT:8889
+        labels:
+          com.docker.ucp.access.label: DOCKERLABEL
+        deploy:
+          restart_policy:
+            condition: on-failure
+          placement:
+            constraints:
+              - node.role == worker
+          replicas: DOCKERCNT
+          labels:
+            com.docker.ucp.access.label: DOCKERLABEL
+          
+networks:
+  default:
+    labels:
+      com.docker.ucp.access.label: DOCKERLABEL
+
+
