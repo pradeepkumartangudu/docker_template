@@ -18,9 +18,9 @@ node {
     def docker_registry_id = "jenkinsaegdtrwestus2"
     def docker_compose = "docker-compose-$slotlowername$@slot@"
     def docker_dtr_tag = "${docker_registry}/aeg/$slotlowername$@slot@"
-    def docker_ext_port = "4411"
-    def docker_ext_https_port = "4412"
-    def docker_label = "/DEV/AEG/$slotname$@slot@"
+    def docker_ext_port = "@dockerport@"
+    def docker_ext_https_port = "@dockerportssl@"
+    def docker_label = "/Production/AEG/$slotname$@slot@"
     def docker_cnt = "4" 
     def site_url = "http://aeg-$slotlowername$@slot@-prod.trafficmanager.net" 
 
